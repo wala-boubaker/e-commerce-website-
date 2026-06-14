@@ -1,0 +1,189 @@
+
+document.addEventListener('DOMContentLoaded', () => {
+  const productsLsKey = "jardinage-products-v1";
+  let products = [];
+  let editProductId = null;
+
+  // Form elements
+  const toolForm = document.getElementById('toolForm');
+  const toolIdInput = document.getElementById('toolId');
+  const toolNameInput = document.getElementById('toolName');
+  const toolPriceInput = document.getElementById('toolPrice');
+  const toolDescriptionInput = document.getElementById('toolDescription');
+  const toolImageUrlInput = document.getElementById('toolImageUrl');
+  const toolQuantityInput = document.getElementById('toolQuantity');
+  const btnSubmit = document.getElementById('btnSubmit');
+  const btnClearAll = document.getElementById('btnClearAll');
+
+  // Load products from localStorage
+  function loadProducts() {
+    const saved = localStorage.getItem(productsLsKey);
+    if (saved) {
+      try {
+        products = JSON.parse(saved);
+        if (!Array.isArray(products)) products = [];
+      } catch {
+        products = [];
+      }
+    } else {
+      products = [];
+    }
+  }
+
+  // Save products to localStorage
+  function saveProducts() {
+    localStorage.setItem(productsLsKey, JSON.stringify(products));
+  }
+
+  // Clear form fields
+  function clearForm() {
+    editProductId = null;
+    toolForm.reset();
+    btnSubmit.textContent = 'Ajouter';
+    toolIdInput.value = '';
+  }
+
+  // Render product list in the table
+  function renderProductList() {
+    const productListBody = document.getElementById('productListBody');
+    productListBody.innerHTML = '';
+
+    products.forEach(p => {
+      const tr = document.createElement('tr');
+
+      const tdName = document.createElement('td');
+      tdName.textContent = p.name;
+      tr.appendChild(tdName);
+
+      const tdDesc = document.createElement('td');
+      tdDesc.textContent = p.description || '-';
+      tr.appendChild(tdDesc);
+
+      const tdPrice = document.createElement('td');
+      tdPrice.textContent = p.price.toFixed(2).replace('.', ',');
+      tr.appendChild(tdPrice);
+
+      const tdImage = document.createElement('td');
+      if (p.imageUrl) {
+        const img = document.createElement('img');
+        img.src = p.imageUrl;
+        img.alt = p.name;
+        img.style.width = '80px';
+        img.style.height = '50px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '4px';
+        tdImage.appendChild(img);
+      } else {
+        tdImage.textContent = '-';
+      }
+      tr.appendChild(tdImage);
+
+      const tdQuantity = document.createElement('td');
+      tdQuantity.textContent = p.quantity;
+      tr.appendChild(tdQuantity);
+
+      const tdActions = document.createElement('td');
+      tdActions.className = 'actions';
+
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'btn btn-warning btn-sm';
+      btnEdit.textContent = 'Modifier';
+      btnEdit.title = `Modifier ${p.name}`;
+      btnEdit.addEventListener('click', () => startEditProduct(p.id));
+      tdActions.appendChild(btnEdit);
+
+      const btnDelete = document.createElement('button');
+      btnDelete.className = 'btn btn-danger btn-sm';
+      btnDelete.textContent = 'Supprimer';
+      btnDelete.title = `Supprimer ${p.name}`;
+      btnDelete.addEventListener('click', () => deleteProduct(p.id));
+      tdActions.appendChild(btnDelete);
+
+      tr.appendChild(tdActions);
+      productListBody.appendChild(tr);
+    });
+  }
+
+  // Start editing a product
+  function startEditProduct(id) {
+    const p = products.find(prod => prod.id === id);
+    if (!p) return;
+    editProductId = id;
+    toolIdInput.value = id;
+    toolNameInput.value = p.name;
+    toolPriceInput.value = p.price;
+    toolDescriptionInput.value = p.description || '';
+    toolImageUrlInput.value = p.imageUrl || '';
+    toolQuantityInput.value = p.quantity;
+    btnSubmit.textContent = 'Mettre à jour';
+  }
+
+  // Delete a product
+  function deleteProduct(id) {
+    if (!confirm('Voulez-vous vraiment supprimer cet outil ?')) return;
+    products = products.filter(p => p.id !== id);
+    saveProducts();
+    renderProductList();
+    clearForm();
+  }
+
+  // Clear all products
+  function clearAllProducts() {
+    if (!confirm('Voulez-vous vraiment effacer tout le matériel ? Cette action est irréversible.')) return;
+    products = [];
+    saveProducts();
+    renderProductList();
+    clearForm();
+  }
+
+  // Event listeners
+  toolForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = toolNameInput.value.trim();
+    const price = parseFloat(toolPriceInput.value);
+    const desc = toolDescriptionInput.value.trim();
+    const imageUrl = toolImageUrlInput.value.trim();
+    const quantity = parseInt(toolQuantityInput.value);
+
+    if (!name || isNaN(price) || price < 0 || isNaN(quantity) || quantity < 0) {
+      alert('Veuillez remplir correctement tous les champs requis.');
+      return;
+    }
+
+    if (editProductId) {
+      const idx = products.findIndex(p => p.id === editProductId);
+      if (idx !== -1) {
+        products[idx].name = name;
+        products[idx].price = price;
+        products[idx].description = desc;
+        products[idx].imageUrl = imageUrl;
+        products[idx].quantity = quantity;
+      }
+      editProductId = null;
+      btnSubmit.textContent = 'Ajouter';
+    } else {
+      const newProduct = {
+        id: Date.now().toString(),
+        name,
+        price,
+        description: desc,
+        imageUrl,
+        quantity
+      };
+      products.push(newProduct);
+    }
+    saveProducts();
+    renderProductList();
+    clearForm();
+  });
+
+  btnClearAll.addEventListener('click', clearAllProducts);
+
+  // Initialize app
+  function init() {
+    loadProducts();
+    renderProductList();
+  }
+
+  init();
+})();
